@@ -4,13 +4,15 @@ const morgan = require( 'morgan' );
 const jsonParser = bodyParser.json();
 const uuid = require( 'uuid' );
 const validateToken = require( './middleware/validateToken' );
+const mongoose = require( 'mongoose' );
 
+const { Bookmark } = require( './models/bookmarkModel' );
 const app = express();
 
 app.use( morgan( 'dev' ) );
 app.use( validateToken );
 
-let bookmarks = [
+/*let bookmarks = [
     {
         id: uuid.v4(),
         title: "Title",
@@ -39,11 +41,19 @@ let bookmarks = [
         url: "www.github.com",
         rating: 11
     }
-];
+];*/
 
 app.get('/bookmarks', (req, res) =>{
     console.log("Getting the list.");
-    return res.status( 200 ).json(bookmarks);
+    Bookmark
+        .getAll()
+        .then( result => {
+            return res.status( 200 ).json(result);
+        })
+        .catch( err => {
+            res.statusMessage = "Something went wrong with the Database.";
+            return res.status( 500 ).end();
+        })
 });
 
 app.get( '/bookmark', (req, res) =>{
@@ -57,21 +67,20 @@ app.get( '/bookmark', (req, res) =>{
         return res.status( 406 ).end();
     }
 
-    let result = bookmarks.find( (bookmark) =>{
-        if( bookmark.title == title){
-            return bookmark;
-        }
-    });
-
-    if( !result ){
-        res.statusMessage = `That bookmark 'title'=${title} is not found in the list.`;
-        return res.status( 404 ).end();
-    }
-
-    return res.status( 200 ).json(result);
+    Bookmark
+        .getByTitle( title )
+        .then( result => {
+            if( !result ) {
+                res.statusMessage = `There is no bookmark with thee title: '${title}'`;
+                return res.status( 404 ).end();
+            }
+            else {
+                return res.status( 200 ).json( result );
+            }
+        })
 });
 
-app.post( '/bookmark', jsonParser, (req, res) =>{
+app.post( '/bookmarks', jsonParser, (req, res) =>{
     console.log("Post a new bookmark.");
     console.log("Body", req.body);
     let title = req.body.title;
@@ -85,21 +94,32 @@ app.post( '/bookmark', jsonParser, (req, res) =>{
         return res.status( 406 ).end();
     }
 
-    if(!(typeof(rating) === 'number')){
+    rating = Number( rating );
+
+    if( isNaN( rating ) ){
         res.statusMessage = "The 'rating' must be a number";
         return res.status( 406 ).end();
     }
 
     let nwbookmrk = {
-        id : id,
-        title : title,
-        description : description,
-        url : url,
-        rating : rating
+        id,
+        title,
+        description,
+        url,
+        rating
     }
 
-    bookmarks.push(nwbookmrk);
-    return res.status( 201 ).json({});
+    Bookmark
+        .createBookmark( nwbookmrk )
+        .then( result => {
+            if( result.errmsg )
+                return res.status( 400 ).end();
+            return res.status( 201 ).json( result );
+        })
+        .catch( err => {
+            res.statusMessage = "Something went wrong with the Database.";
+            return res.status( 500 ).end();
+        })
 });
 
 app.delete( '/bookmark/:id', (req, res) =>{
@@ -108,20 +128,20 @@ app.delete( '/bookmark/:id', (req, res) =>{
 
     let id = req.params.id;
 
-    let bookmark = bookmarks.findIndex( (book) =>{
-        if(book.id == id){
-            return true;
-        }
-    });
-
-    if(bookmark >= 0){
-        bookmarks.splice(bookmark, 1);
-        return res.status( 200 ).end();
-    }
-    else{
-        res.statusMessage = "The bookmark is not found.";
-        return res.status( 404 ).end();
-    }
+    Bookmark
+        .deleteBookmark( id )
+            .then( result => {
+                if( !result ) {
+                    res.statusMessage = "The bookmark doesn't exist.";
+                    return res.status( 404 ).end();
+                }
+                else
+                    return res.status( 200 ).end();
+            })
+            .catch( eerr => {
+                res.statusMessage = "Something went wrong with the Database.";
+                return res.status( 500 ).end();
+            })
 });
 
 app.patch( '/bookmark/:id', jsonParser, (req, res) =>{
@@ -130,11 +150,6 @@ app.patch( '/bookmark/:id', jsonParser, (req, res) =>{
 
     let idP = req.params.id;
     let idB = req.body.id;
-
-    let title = req.body.title;
-    let description = req.body.description;
-    let url = req.body.url;
-    let rating = req.body.rating;
 
     if(!idB){
         res.statusMessage = "The 'id' in the body is missing.";
@@ -146,36 +161,41 @@ app.patch( '/bookmark/:id', jsonParser, (req, res) =>{
         return res.status( 409 ).end();
     }
 
-    let bookmark = bookmarks.find( (book) =>{
-        if(book.id == idB){
-            if(title){
-                book.title = title;
-            }
-            if(description){
-                book.description = description;
-            }
-            if(url){
-                book.url = url;
-            }
-            if(rating){
-                book.rating = rating;
-            }
-            return book;
-        }
-    });
-
-    return res.status( 202 ).json(bookmark);
+    Bookmark
+        .updateBookmark( req.body )
+            .then( result => {
+                return res.status( 202 ).json( result );
+            })
+            .catch( err => {
+                return err;
+            })
 });
 
 app.listen( 8080, () =>{
     console.log("This server is running in port 8080.");
+
+    new Promise( ( resolve, reject ) => {
+        const settings = {
+            useNewUrlParser : true,
+            useUnifiedTopology : true,
+            useCreateIndex : true
+        };
+        mongoose.connect( 'mongodb://localhost/bookmarksdb', settings, ( err ) => {
+            if( err )
+                return eject( err );
+            else {
+                console.log("Database connected succesfully.");
+                return resolve();
+            }
+        })
+    })
 });
 
 //http://localhost:8080
 
 //http://localhost:8080/bookmarks
 
-//http://localhost:8080/bookmark?title=
+//http://localhost:8080/bookmark?title
 
 //http://localhost:8080/bookmark/:id
 
@@ -184,6 +204,6 @@ app.listen( 8080, () =>{
         "title": "New",
         "description": "New bookmark",
         "url": "www.hristu.net",
-        "rating": 100
+        "rating": "100"
     }
 */
