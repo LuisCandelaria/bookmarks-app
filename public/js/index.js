@@ -33,6 +33,32 @@ function addBookmarkFetch( title, desc, url, rating ) {
         })
 }
 
+function fetchBookmarkByTitle( searchTerm ) {
+    let url = `/bookmark/?title=${searchTerm}`;
+
+    let settings = {
+        method : 'GET',
+        headers : {
+            Authorization : `Bearer ${API_TOKEN}`
+        }
+    }
+
+    let bookmarks = document.getElementById( 'fetchBookmarks' );
+
+    fetch( url, settings )
+        .then( response => {
+            if( response.ok )
+                return response.json();
+            throw new Error( response.statusText );
+        })
+        .then( responseJSON => {
+            displayBookmarks( responseJSON );
+        })
+        .catch( err => {
+            bookmarks.innerHTML = `<div class="errorMeessage"> ${ err.message } </div>`;
+        })
+}
+
 function fetchBookmarks() {
     let url = '/bookmarks';
 
@@ -205,6 +231,13 @@ function init() {
         desc.value = "";
         url.value = "";
     });
+
+    let searchBtn = document.getElementById( 'searchBtn' );
+    searchBtn.addEventListener( 'click', ( event ) => {
+        let searchTerm = document.getElementById( 'searchTerm' );
+        fetchBookmarkByTitle(searchTerm.value);
+        searchTerm.value = "";
+    })
 }
 
 init();
