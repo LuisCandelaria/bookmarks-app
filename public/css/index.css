@@ -1,0 +1,8 @@
+.bookmark {
+    border: 1px solid black;
+    margin-top: 10px;
+}
+
+.hidden {
+    display: none;
+}

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="uft-8">
+        <meta name="viewport" content="width=device-width">
+        <title>Bookmarks</title>
+        <link href="./css/index.css" rel="stylesheet" type="text/css" />
+    </head>
+    <body>
+        <h1>Bookmarks</h1>
+        <div id="newBookmark">
+            <input type="text" id="inTitle" placeholder="Title.."><br>
+            <textarea id="inDesc" placeholder="Description.." rows="7" cols="70"></textarea><br>
+            <input type="text" id="inUrl" placeholder="Url.."><br>
+            <label for="rating">Rating: </label>
+            <select name="rating" id="inRating">
+                <option value="10">10</option>
+                <option value="9">9</option>
+                <option value="8">8</option>
+                <option value="7">7</option>
+                <option value="6">6</option>
+                <option value="5">5</option>
+                <option value="4">4</option>
+                <option value="3">3</option>
+                <option value="2">2</option>
+                <option value="1">1</option>
+            </select>
+            <button type="submit" id="btnSubmit">Submit!</button>
+            <button type="button" id="btnEdit" class="hidden">Edit!</button>
+        </div>
+        <div id="fetchBookmarks">
+
+        </div>
+        <script src="./js/index.js"></script>
+    </body>
+</html>
